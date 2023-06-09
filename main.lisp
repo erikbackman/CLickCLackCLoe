@@ -1,4 +1,4 @@
-(defpackage #:tictactoe
+(defpackage #:clickclackcloe
   (:use :cl)
   (:export :main))
 
