@@ -74,7 +74,7 @@
      (let ((transposed (transpose-board board)))
        (some #'all-equal-p
 	     (loop for i from 0 below n :collect (array-slice transposed i))))
-     (all-equal-p (matrix-diagonal board)))))
+     (all-equal-p (board-diagonal board)))))
 
 ;; ----------------------------------------------------
 
