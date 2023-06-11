@@ -126,8 +126,9 @@
       (loop for i from 0 below n do
 	(loop for j from 0 below m do
 	  (when-let ((p (aref board i j)))
-	    (let ((x0 (+ 100 (* i h/3)))
-		  (y0 (+ 100 (* j h/3))))
+	    (let* ((mid (/ h/3 2))
+		   (x0 (+ mid (* i h/3)))
+		   (y0 (+ mid (* j h/3))))
 	      (draw-piece renderer x0 y0 p))))))))
 
 ;; ----------------------------------------------------
