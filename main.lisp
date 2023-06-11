@@ -12,7 +12,6 @@
 ;; ----------------------------------------------------
 (defvar *win-h* 600)
 (defvar *win-w* 600)
-(defvar *board* (make-array '(3 3) :initial-element nil))
 
 (defun array-slice (arr row)
   (make-array (array-dimension arr 1) 
@@ -108,10 +107,10 @@
 
 (defun draw-piece (renderer x0 y0 p)
   (case p
-    ('x
+    (x
      (sdl2:render-draw-line renderer (- x0 50) (- y0 50) (+ x0 50) (+ y0 50))
      (sdl2:render-draw-line renderer (- x0 50) (+ y0 50) (+ x0 50) (- y0 50)))
-    ('o
+    (o
      (draw-circle (lambda (x y) (sdl2:render-draw-point renderer x y)) x0 y0 50))))
 
 (defun draw-board (renderer board)
@@ -133,21 +132,28 @@
 
 ;; ----------------------------------------------------
 
+(defclass game-state ()
+  ((board :initform (make-array '(3 3) :initial-element nil))
+   (won :initform nil)))
+
+(defmethod update-board-pos ((obj game-state) x y p)
+  (let ((b (slot-value obj 'board)))
+    (setf (aref b x y) p)
+    (when (check-victory b)
+      (setf (slot-value obj 'won) t))))
+
+(defmethod reset-state ((obj game-state))
+  (setf (slot-value obj 'won) nil)
+  (clear-board (slot-value obj 'board)))
+
+;; ----------------------------------------------------
+
 (defun render (renderer board)
   (sdl2:set-render-draw-color renderer #x00 #x00 #x00 #x00)
   (sdl2:render-clear renderer)
   (sdl2:set-render-draw-color renderer #xFF #xFF #xFF #xFF)
   (draw-board renderer board)
   (sdl2:render-present renderer))
-
-(defun update (won board)
-  (unless won
-    (multiple-value-bind (mx my btn) (sdl2::mouse-state)
-      (destructuring-bind (x . y) (pos->index mx my)
-	(update-board x y board (case btn
-				  (1 'x)
-				  (4 'o)))
-	(values (check-victory board) board)))))
 
 (defmacro with-window-renderer ((window renderer) &body body)
   `(sdl2:with-init (:video)
@@ -161,27 +167,27 @@
 	 ,@body))))
 
 (defun game-loop ()
-  (let ((won nil))
+  (let ((state (make-instance 'game-state)))
     (with-window-renderer (window renderer)
       (sdl2:with-event-loop (:method :poll)
 	(:quit () t)
 	(:wait () t)
-	(:mousebuttondown () (multiple-value-bind (w) (update won *board*)
-			       (setf won w)))
+	(:mousebuttondown ()
+			  (multiple-value-bind (mx my btn) (sdl2:mouse-state)
+			    (destructuring-bind (x . y) (pos->index mx my)
+			      (update-board-pos state x y (case btn (1 'x) (4 'o))))))
 	(:idle ()
-	       (render renderer *board*)
+	       (render renderer (slot-value state 'board))
 
-	       (when won
+	       (when (slot-value state 'won)
 		 (sdl2-ffi.functions:sdl-show-simple-message-box
 		  sdl2-ffi:+sdl-messagebox-information+
 		  "Info" "You won" window)
-		 (clear-board *board*)
-		 (setf won nil))
+		 (reset-state state))
 	       
 	       (sdl2:delay 60))))))
 
 (defun main ()
-  (clear-board *board*)
   (game-loop))
 
 (main)
