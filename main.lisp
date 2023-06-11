@@ -185,6 +185,3 @@
   (game-loop))
 
 (main)
-
-
-
