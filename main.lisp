@@ -129,22 +129,6 @@
 
 ;; ----------------------------------------------------
 
-(defclass game-state ()
-  ((board :initform (make-array '(3 3) :initial-element nil))
-   (won :initform nil)))
-
-(defmethod update-board-pos ((obj game-state) x y p)
-  (let ((b (slot-value obj 'board)))
-    (setf (aref b x y) p)
-    (when (check-victory b)
-      (setf (slot-value obj 'won) t))))
-
-(defmethod reset-state ((obj game-state))
-  (setf (slot-value obj 'won) nil)
-  (clear-board (slot-value obj 'board)))
-
-;; ----------------------------------------------------
-
 (defun render (renderer board)
   (sdl2:set-render-draw-color renderer #x00 #x00 #x00 #x00)
   (sdl2:render-clear renderer)
@@ -164,25 +148,33 @@
 	 ,@body))))
 
 (defun game-loop ()
-  (let ((state (make-instance 'game-state)))
-    (with-window-renderer (window renderer)
-      (sdl2:with-event-loop (:method :poll)
-	(:quit () t)
-	(:wait () t)
-	(:mousebuttondown ()
-			  (multiple-value-bind (mx my btn) (sdl2:mouse-state)
-			    (destructuring-bind (x . y) (pos->index mx my)
-			      (update-board-pos state x y (case btn (1 'x) (4 'o))))))
-	(:idle ()
-	       (render renderer (slot-value state 'board))
+  (let ((board (make-array '(3 3) :initial-element nil))
+	(won nil))
+    (flet ((update-pos (i j p)
+	     (setf (aref board i j) p)
+	     (when (check-victory board)
+	       (setf won t)))
+	   (reset-state ()
+	     (clear-board board)
+	     (setf won nil)))
+      
+      (with-window-renderer (window renderer)
+	(sdl2:with-event-loop (:method :poll)
+	  (:quit () t)
+	  (:mousebuttondown ()
+			    (multiple-value-bind (mx my btn) (sdl2:mouse-state)
+			      (destructuring-bind (x . y) (pos->index mx my)
+				(update-pos x y (case btn (1 'x) (4 'o))))))
+	  (:idle ()
+		 (render renderer board)
 
-	       (when (slot-value state 'won)
-		 (sdl2-ffi.functions:sdl-show-simple-message-box
-		  sdl2-ffi:+sdl-messagebox-information+
-		  "Info" "You won" window)
-		 (reset-state state))
+		 (when won
+		   (sdl2-ffi.functions:sdl-show-simple-message-box
+		    sdl2-ffi:+sdl-messagebox-information+
+		    "Info" "You won" window)
+		   (reset-state))
 	       
-	       (sdl2:delay 60))))))
+		 (sdl2:delay 60)))))))
 
 (defun main ()
   (game-loop))
