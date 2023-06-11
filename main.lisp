@@ -164,10 +164,8 @@
       (sdl2:with-event-loop (:method :poll)
 	(:quit () t)
 	(:wait () t)
-	(:mousebuttondown ()
-			  (unless won
-			    (multiple-value-bind (w) (update won *board*)
-			      (setf won w))))
+	(:mousebuttondown () (multiple-value-bind (w) (update won *board*)
+			       (setf won w)))
 	(:idle ()
 	       (render renderer *board*)
 
