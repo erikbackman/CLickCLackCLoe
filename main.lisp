@@ -46,9 +46,6 @@
       (loop for j from 0 below m do
 	(funcall f board i j)))))
 
-(defun update-board (x y board p)
-  (setf (aref board x y) p))
-
 (defun clear-board (board)
   (iterate-board board (lambda (b i j) (setf (aref b i j) nil))))
 
