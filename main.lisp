@@ -120,14 +120,15 @@
     (sdl2:render-draw-line renderer 0 h/3 *win-w* h/3)
     (sdl2:render-draw-line renderer 0 2h/3 *win-w* 2h/3)
     (sdl2:render-draw-line renderer h/3 0 h/3 *win-h*)
-    (sdl2:render-draw-line renderer 2h/3 0 2h/3 *win-h*))
-  (destructuring-bind (n m) (array-dimensions board)
-    (loop for i from 0 below n do
-      (loop for j from 0 below m do
-	(when-let ((p (aref board i j)))
-	  (let ((x0 (+ 100 (* i 200)))
-		(y0 (+ 100 (* j 200))))
-	    (draw-piece renderer x0 y0 p)))))))
+    (sdl2:render-draw-line renderer 2h/3 0 2h/3 *win-h*)
+
+    (destructuring-bind (n m) (array-dimensions board)
+      (loop for i from 0 below n do
+	(loop for j from 0 below m do
+	  (when-let ((p (aref board i j)))
+	    (let ((x0 (+ 100 (* i h/3)))
+		  (y0 (+ 100 (* j h/3))))
+	      (draw-piece renderer x0 y0 p))))))))
 
 ;; ----------------------------------------------------
 
