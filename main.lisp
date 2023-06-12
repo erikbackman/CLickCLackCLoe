@@ -13,11 +13,6 @@
 (defvar *win-h* 600)
 (defvar *win-w* 600)
 
-(defun array-slice (arr row)
-  (make-array (array-dimension arr 1) 
-	      :displaced-to arr
-	      :displaced-index-offset (* row (array-dimension arr 1))))
-
 (defun transpose-board (board)
   (destructuring-bind (n m) (array-dimensions board)
     (let ((new (make-array `(,n ,m) :initial-element nil)))
@@ -27,18 +22,14 @@
 		(aref board i j))))
       new)))
 
-(defun all-equal-p (arr)
-  (loop for i from 1 below 3
-	for fst = (aref arr 0)
-	for curr = (aref arr i)
-	:always (and curr (equalp fst curr))))
-
-(defun board-diagonal (board)
-  (let* ((n (array-dimension board 0))
-	 (new (make-array n :initial-element nil)))
-    (loop for i from 0 below n do
-      (setf (aref new i) (aref board i i)))
-    new))
+(defun board-diagonals (board)
+  (let* ((n (array-dimension board 0)))
+    (values
+     (loop for i from 0 below n
+       collect (aref board i i))
+     (loop for i from (- n 1) downto 0
+	   for j = (- n 1 i)
+	   collect (aref board i j)))))
 
 (defun iterate-board (board f)
   (destructuring-bind (n m) (array-dimensions board)
@@ -60,15 +51,29 @@
 	     ((between 400 600 a) 2))))
     (cons (ix x) (ix y))))
 
+(defun all-equal-p (list)
+  (loop for item in list always item))
+
+(defun check-victory-rows (b n)
+  (all-equal-p
+   (loop for i from 0 below n
+	 collect (loop for j from 0 below n
+		       for p = (aref b i j)
+		       when p
+			 collect p))))
+
 (defun check-victory (board)
   (let ((n (array-dimension board 0)))
-    (or
-     (some #'all-equal-p
-	   (loop for i from 0 below n :collect (array-slice board i)))
-     (let ((transposed (transpose-board board)))
-       (some #'all-equal-p
-	     (loop for i from 0 below n :collect (array-slice transposed i))))
-     (all-equal-p (board-diagonal board)))))
+    (or (check-victory-rows board n)
+     
+	(let ((transposed (transpose-board board)))
+	  (check-victory-rows transposed n))
+     
+	(and (let ((mid (ceiling (/ (- n 1) 2)))) (aref board mid mid))
+	     (multiple-value-bind (d1 d2) (board-diagonals board)
+	       (or
+		(all-equal-p d1)
+		(all-equal-p d2)))))))
 
 ;; ----------------------------------------------------
 
