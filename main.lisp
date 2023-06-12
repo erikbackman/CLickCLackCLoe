@@ -52,15 +52,19 @@
     (cons (ix x) (ix y))))
 
 (defun all-equal-p (list)
-  (loop for item in list always item))
+  (when list
+    (let ((fst (first list)))
+      (loop for item in list always (and item
+					 (equal fst item))))))
 
 (defun check-victory-rows (b n)
-  (all-equal-p
-   (loop for i from 0 below n
-	 collect (loop for j from 0 below n
-		       for p = (aref b i j)
-		       when p
-			 collect p))))
+  (some #'all-equal-p
+	(loop for i from 0 below n
+	      collect (loop for j from 0 below n
+			    for p = (aref b i j)
+			    when p collect p into row
+			      finally (when (length= n row)
+					(return row))))))
 
 (defun check-victory (board)
   (let ((n (array-dimension board 0)))
@@ -124,13 +128,11 @@
     (sdl2:render-draw-line renderer 2h/3 0 2h/3 *win-h*)
 
     (let ((mid (/ h/3 2)))
-      (destructuring-bind (n m) (array-dimensions board)
-	(loop for i from 0 below n do
-	  (loop for j from 0 below m do
-	    (when-let ((p (aref board i j)))
-	      (let* ((x0 (+ mid (* i h/3)))
-		     (y0 (+ mid (* j h/3))))
-		(draw-piece renderer x0 y0 p)))))))))
+      (iterate-board board
+		     (lambda (b i j) (when-let ((p (aref b i j)))
+				  (let* ((x0 (+ mid (* i h/3)))
+					 (y0 (+ mid (* j h/3))))
+				    (draw-piece renderer x0 y0 p))))))))
 
 ;; ----------------------------------------------------
 
