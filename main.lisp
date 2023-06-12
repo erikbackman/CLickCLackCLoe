@@ -1,13 +1,14 @@
-(defpackage #:clickclackcloe
-  (:use :cl)
-  (:export :main))
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (ql:quickload "sdl2")
   (ql:quickload "cl-opengl")
   (ql:quickload "alexandria"))
 
-(use-package :alexandria)
+(defpackage #:clickclackcloe
+  (:use :cl)
+  (:import-from :alexandria :when-let)
+  (:export :main))
+
+(in-package :clickclackcloe)
 
 ;; ----------------------------------------------------
 (defvar *win-h* 600)
@@ -21,15 +22,6 @@
 	  (setf (aref new j i)
 		(aref board i j))))
       new)))
-
-(defun board-diagonals (board)
-  (let* ((n (array-dimension board 0)))
-    (values
-     (loop for i from 0 below n
-       collect (aref board i i))
-     (loop for i from (- n 1) downto 0
-	   for j = (- n 1 i)
-	   collect (aref board i j)))))
 
 (defun iterate-board (board f)
   (destructuring-bind (n m) (array-dimensions board)
@@ -51,33 +43,23 @@
 	     ((between 400 600 a) 2))))
     (cons (ix x) (ix y))))
 
-(defun all-equal-p (list)
-  (when list
-    (let ((fst (first list)))
-      (loop for item in list always (and item
-					 (equal fst item))))))
-
-(defun check-victory-rows (b n)
-  (some #'all-equal-p
-	(loop for i from 0 below n
-	      collect (loop for j from 0 below n
-			    for p = (aref b i j)
-			    when p collect p into row
-			      finally (when (length= n row)
-					(return row))))))
+(defun check-victory-rows (board)
+    (loop for i from 0 below 3
+	  for fst = (aref board i 0)
+	  thereis
+	  (loop for j from 0 below 3
+		for c = (aref board i j)
+		always (and fst (equal fst c)))))
 
 (defun check-victory (board)
-  (let ((n (array-dimension board 0)))
-    (or (check-victory-rows board n)
-     
-	(let ((transposed (transpose-board board)))
-	  (check-victory-rows transposed n))
-     
-	(and (let ((mid (ceiling (/ (- n 1) 2)))) (aref board mid mid))
-	     (multiple-value-bind (d1 d2) (board-diagonals board)
-	       (or
-		(all-equal-p d1)
-		(all-equal-p d2)))))))
+  (or (check-victory-rows board)
+      (check-victory-rows (transpose-board board))
+      (let ((mid (aref board 1 1)))
+	(and mid
+	 (or (and (equal (aref board 0 0) mid)
+		  (equal mid (aref board 2 2)))
+	     (and (equal (aref board 2 0) mid)
+		  (equal mid (aref board 0 2))))))))
 
 ;; ----------------------------------------------------
 
@@ -128,11 +110,12 @@
     (sdl2:render-draw-line renderer 2h/3 0 2h/3 *win-h*)
 
     (let ((mid (/ h/3 2)))
-      (iterate-board board
-		     (lambda (b i j) (when-let ((p (aref b i j)))
-				  (let* ((x0 (+ mid (* i h/3)))
-					 (y0 (+ mid (* j h/3))))
-				    (draw-piece renderer x0 y0 p))))))))
+      (iterate-board
+       board
+       (lambda (b i j) (when-let ((p (aref b i j)))
+		    (let* ((x0 (+ mid (* i h/3)))
+			   (y0 (+ mid (* j h/3))))
+		      (draw-piece renderer x0 y0 p))))))))
 
 ;; ----------------------------------------------------
 
