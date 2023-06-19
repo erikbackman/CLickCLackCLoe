@@ -143,7 +143,7 @@
 	     (update-pos (x y p)
 	       (setf (aref board x y) p)
 	       (when-let ((player (check-victory board)))
-		 (sdl2:push-user-event :victory :o))
+		 (sdl2:push-user-event :victory player))
 	       (sdl2:push-user-event :board-changed)))
 	
 	(re-render)
@@ -169,4 +169,3 @@
 
 (defun main ()
   (game-loop))
-
