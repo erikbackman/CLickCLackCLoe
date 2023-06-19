@@ -11,8 +11,9 @@
 (in-package :clickclackcloe)
 
 ;; ----------------------------------------------------
-(defvar *win-h* 600)
-(defvar *win-w* 600)
+(defparameter *win-h* 600)
+(defparameter *win-w* 600)
+(defparameter *cell-size* (/ *win-h* 3))
 
 (defun transpose-board (board)
   (destructuring-bind (n m) (array-dimensions board)
@@ -32,16 +33,9 @@
 (defun clear-board (board)
   (iterate-board board (lambda (b i j) (setf (aref b i j) nil))))
 
-(defun between (a b x)
-  (and (> x a) (< x b)))
-
 (defun pos->index (x y)
-  (flet ((ix (a)
-	   (cond
-	     ((between 0 200 a) 0)
-	     ((between 200 400 a) 1)
-	     ((between 400 600 a) 2))))
-    (cons (ix x) (ix y))))
+  (cons (floor (/ x *cell-size*))
+	(floor (/ y *cell-size*))))
 
 (defun check-victory-rows (board)
     (loop for i from 0 below 3
@@ -49,17 +43,19 @@
 	  thereis
 	  (loop for j from 0 below 3
 		for c = (aref board i j)
-		always (and fst (equal fst c)))))
+		always (and fst (equal fst c))
+		finally (return fst))))
 
 (defun check-victory (board)
   (or (check-victory-rows board)
       (check-victory-rows (transpose-board board))
       (let ((mid (aref board 1 1)))
 	(and mid
-	 (or (and (equal (aref board 0 0) mid)
-		  (equal mid (aref board 2 2)))
-	     (and (equal (aref board 2 0) mid)
-		  (equal mid (aref board 0 2))))))))
+	     (when (or (and (equal (aref board 0 0) mid)
+			    (equal mid (aref board 2 2)))
+		       (and (equal (aref board 2 0) mid)
+			    (equal mid (aref board 0 2))))
+	       mid)))))
 
 ;; ----------------------------------------------------
 
@@ -95,10 +91,10 @@
 
 (defun draw-piece (renderer x0 y0 p)
   (case p
-    (x
+    (:x
      (sdl2:render-draw-line renderer (- x0 50) (- y0 50) (+ x0 50) (+ y0 50))
      (sdl2:render-draw-line renderer (- x0 50) (+ y0 50) (+ x0 50) (- y0 50)))
-    (o
+    (:o
      (draw-circle (lambda (x y) (sdl2:render-draw-point renderer x y)) x0 y0 50))))
 
 (defun draw-board (renderer board)
@@ -139,34 +135,33 @@
 
 (defun game-loop ()
   (let ((board (make-array '(3 3) :initial-element nil))
-	(won nil))
+	(winner nil))
     (flet ((update-pos (i j p)
 	     (setf (aref board i j) p)
-	     (when (check-victory board)
-	       (setf won t)))
+	     (when-let ((player (check-victory board)))
+	       (setf winner player)))
 	   (reset-state ()
 	     (clear-board board)
-	     (setf won nil)))
+	     (setf winner nil)))
       
       (with-window-renderer (window renderer)
 	(sdl2:with-event-loop (:method :poll)
 	  (:quit () t)
 	  (:mousebuttondown ()
 			    (multiple-value-bind (mx my btn) (sdl2:mouse-state)
+			      (declare (ignore btn))
 			      (destructuring-bind (x . y) (pos->index mx my)
-				(update-pos x y (case btn (1 'x) (4 'o))))))
+				(update-pos x y :o))))
 	  (:idle ()
 		 (render renderer board)
 
-		 (when won
+		 (when winner
 		   (sdl2-ffi.functions:sdl-show-simple-message-box
 		    sdl2-ffi:+sdl-messagebox-information+
-		    "Info" "You won" window)
+		    "Info" (format nil "~a won" winner) window)
 		   (reset-state))
 	       
 		 (sdl2:delay 60)))))))
 
 (defun main ()
   (game-loop))
-
-(main)
