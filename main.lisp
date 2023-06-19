@@ -133,35 +133,40 @@
        (sdl2:with-renderer (,renderer ,window :index -1 :flags '(:accelerated))
 	 ,@body))))
 
+(sdl2:register-user-event-type :board-changed)
+(sdl2:register-user-event-type :victory)
+
 (defun game-loop ()
-  (let ((board (make-array '(3 3) :initial-element nil))
-	(winner nil))
-    (flet ((update-pos (i j p)
-	     (setf (aref board i j) p)
-	     (when-let ((player (check-victory board)))
-	       (setf winner player)))
-	   (reset-state ()
-	     (clear-board board)
-	     (setf winner nil)))
-      
-      (with-window-renderer (window renderer)
+  (with-window-renderer (window renderer)
+    (let ((board (make-array '(3 3) :initial-element nil)))
+      (flet ((re-render () (render renderer board))
+	     (update-pos (x y p)
+	       (setf (aref board x y) p)
+	       (when-let ((player (check-victory board)))
+		 (sdl2:push-user-event :victory :o))
+	       (sdl2:push-user-event :board-changed)))
+	
+	(re-render)
 	(sdl2:with-event-loop (:method :poll)
 	  (:quit () t)
+	  (:board-changed () (re-render))
+	  
+	  (:victory (:user-data player)
+		    (re-render)
+		    (sdl2-ffi.functions:sdl-show-simple-message-box
+		     sdl2-ffi:+sdl-messagebox-information+
+		     "Info" (format nil "~a won" player) window)
+		    (clear-board board))
+	  
 	  (:mousebuttondown ()
 			    (multiple-value-bind (mx my btn) (sdl2:mouse-state)
 			      (declare (ignore btn))
 			      (destructuring-bind (x . y) (pos->index mx my)
 				(update-pos x y :o))))
-	  (:idle ()
-		 (render renderer board)
 
-		 (when winner
-		   (sdl2-ffi.functions:sdl-show-simple-message-box
-		    sdl2-ffi:+sdl-messagebox-information+
-		    "Info" (format nil "~a won" winner) window)
-		   (reset-state))
-	       
+	  (:idle ()
 		 (sdl2:delay 60)))))))
 
 (defun main ()
   (game-loop))
+
