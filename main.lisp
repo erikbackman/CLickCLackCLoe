@@ -3,12 +3,12 @@
   (ql:quickload "cl-opengl")
   (ql:quickload "alexandria"))
 
-(defpackage #:clickclackcloe
+(defpackage #:tictactoe
   (:use :cl)
   (:import-from :alexandria :when-let)
   (:export :main))
 
-(in-package :clickclackcloe)
+(in-package :tictactoe)
 
 ;; ----------------------------------------------------
 (defparameter *win-h* 600)
@@ -126,7 +126,7 @@
   `(sdl2:with-init (:video)
      (sdl2:set-hint :render-scale-quality "1")
      (sdl2:with-window (,window
-			:title "CLickCLackCloe"
+			:title "tictactoe"
 			:w *win-w*
 			:h *win-h*
 			:flags '(:shown))
