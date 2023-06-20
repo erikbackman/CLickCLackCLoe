@@ -132,8 +132,7 @@
 
 (defclass game-state ()
     ((board :initform (make-array '(3 3) :initial-element nil) :accessor board)
-     (winner :initform nil :accessor winner)
-     (on-winner :accessor on-winner)))
+     (winner :initform nil :accessor winner)))
 
 (defmethod player-move ((obj game-state) x y p)
   (with-slots (board winner on-winner) obj
@@ -157,7 +156,6 @@
 
 	(sdl2:with-event-loop (:method :poll)
 	  (:quit () t)
-	  (:wait () t)
 	  (:keydown (:keysym keysym)
 		    (case (sdl2:scancode keysym)
 		      (:scancode-escape
@@ -169,12 +167,11 @@
 				   (player-move state x y :o))))
 
 	  (:idle ()
+		 (re-render)
 		 (with-slots (winner) state
-		   (if winner
-		       (progn (re-render)
-			      (show-winner winner)
-			      (reset-game state))
-		       (re-render)))
+		   (when winner
+		     (show-winner winner)
+		     (reset-game state)))
 		 (sdl2:delay 60)))))))
 
 (defun main ()
