@@ -4,7 +4,7 @@
   (ql:quickload "alexandria"))
 
 (defpackage #:tictactoe
-  (:use :cl)
+  (:use :cl :asdf)
   (:import-from :alexandria :when-let)
   (:export :main))
 
@@ -29,9 +29,6 @@
     (loop for i from 0 below n do
       (loop for j from 0 below m do
 	(funcall f board i j)))))
-
-(defun clear-board (board)
-  (iterate-board board (lambda (b i j) (setf (aref b i j) nil))))
 
 (defun pos->index (x y)
   (cons (floor (/ x *cell-size*))
@@ -133,38 +130,51 @@
        (sdl2:with-renderer (,renderer ,window :index -1 :flags '(:accelerated))
 	 ,@body))))
 
-(sdl2:register-user-event-type :board-changed)
-(sdl2:register-user-event-type :victory)
+(defclass game-state ()
+    ((board :initform (make-array '(3 3) :initial-element nil) :accessor board)
+     (winner :initform nil :accessor winner)
+     (on-winner :accessor on-winner)))
+
+(defmethod player-move ((obj game-state) x y p)
+  (with-slots (board winner on-winner) obj
+    (setf (aref board x y) p)
+    (when-let ((winner? (check-victory board)))
+      (setf winner winner?))))
+
+(defmethod reset-game ((obj game-state))
+  (with-slots (board winner) obj
+    (iterate-board board (lambda (b i j) (setf (aref b i j) nil)))
+    (setf winner nil)))
 
 (defun game-loop ()
   (with-window-renderer (window renderer)
-    (let ((board (make-array '(3 3) :initial-element nil)))
-      (flet ((re-render () (render renderer board))
-	     (update-pos (x y p)
-	       (setf (aref board x y) p)
-	       (when-let ((player (check-victory board)))
-		 (sdl2:push-user-event :victory player))
-	       (sdl2:push-user-event :board-changed)))
-	
-	(re-render)
+    (let ((state (make-instance 'game-state)))
+      (flet ((re-render () (render renderer (board state)))
+	     (show-winner (winner)
+	       (sdl2-ffi.functions:sdl-show-simple-message-box
+		sdl2-ffi:+sdl-messagebox-information+
+		"Info" (format nil "~a won" winner) window)))
+
 	(sdl2:with-event-loop (:method :poll)
 	  (:quit () t)
-	  (:board-changed () (re-render))
+	  (:wait () t)
+	  (:keydown (:keysym keysym)
+		    (case (sdl2:scancode keysym)
+		      (:scancode-escape
+		       (sdl2:push-event :quit))))
 	  
-	  (:victory (:user-data player)
-		    (re-render)
-		    (sdl2-ffi.functions:sdl-show-simple-message-box
-		     sdl2-ffi:+sdl-messagebox-information+
-		     "Info" (format nil "~a won" player) window)
-		    (clear-board board))
-	  
-	  (:mousebuttondown ()
-			    (multiple-value-bind (mx my btn) (sdl2:mouse-state)
-			      (declare (ignore btn))
-			      (destructuring-bind (x . y) (pos->index mx my)
-				(update-pos x y :o))))
+	  (:mousebuttondown () (multiple-value-bind (mx my btn) (sdl2:mouse-state)
+				 (declare (ignore btn))
+				 (destructuring-bind (x . y) (pos->index mx my)
+				   (player-move state x y :o))))
 
 	  (:idle ()
+		 (with-slots (winner) state
+		   (if winner
+		       (progn (re-render)
+			      (show-winner winner)
+			      (reset-game state))
+		       (re-render)))
 		 (sdl2:delay 60)))))))
 
 (defun main ()
