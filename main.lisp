@@ -168,10 +168,9 @@
 
 	  (:idle ()
 		 (re-render)
-		 (with-slots (winner) state
-		   (when winner
-		     (show-winner)
-		     (reset-game state)))
+		 (when (winner state)
+		   (show-winner)
+		   (reset-game state))
 		 (sdl2:delay 60)))))))
 
 (defun main ()
