@@ -149,10 +149,10 @@
   (with-window-renderer (window renderer)
     (let ((state (make-instance 'game-state)))
       (flet ((re-render () (render renderer (board state)))
-	     (show-winner (winner)
+	     (show-winner ()
 	       (sdl2-ffi.functions:sdl-show-simple-message-box
 		sdl2-ffi:+sdl-messagebox-information+
-		"Info" (format nil "~a won" winner) window)))
+		"Info" (format nil "~a won" (winner state)) window)))
 
 	(sdl2:with-event-loop (:method :poll)
 	  (:quit () t)
@@ -170,7 +170,7 @@
 		 (re-render)
 		 (with-slots (winner) state
 		   (when winner
-		     (show-winner winner)
+		     (show-winner)
 		     (reset-game state)))
 		 (sdl2:delay 60)))))))
 
