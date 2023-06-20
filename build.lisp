@@ -1,0 +1,6 @@
+(pushnew (uiop:getcwd) ql:*local-project-directories*)
+(ql:quickload "sdl2")
+(ql:quickload "cl-opengl")
+(ql:quickload "alexandria")
+(ql:quickload "deploy")
+(asdf:make :tictactoe)
